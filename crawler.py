@@ -38,7 +38,7 @@ def fetch_repos():
     cursor = None
     repos = []
 
-    while len(repos) < 100000:
+    while len(repos) < 100000 and search["pageInfo"]["hasNextPage"]:
         variables = {"cursor": cursor}
         response = requests.post(GITHUB_API_URL, json={"query": query, "variables": variables}, headers=headers)
         data = response.json()
