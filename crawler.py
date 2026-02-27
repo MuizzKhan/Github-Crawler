@@ -38,7 +38,7 @@ def fetch_repos():
     cursor = None
     repos = []
 
-    while len(repos) < 100000 and search["pageInfo"]["hasNextPage"]:
+    while len(repos) < 100000:
         variables = {"cursor": cursor}
         response = requests.post(GITHUB_API_URL, json={"query": query, "variables": variables}, headers=headers)
         data = response.json()
@@ -48,14 +48,17 @@ def fetch_repos():
             break
 
         search = data["data"]["search"]
+
         for repo in search["nodes"]:
             repos.append(repo)
 
         if not search["pageInfo"]["hasNextPage"]:
             break
+
         cursor = search["pageInfo"]["endCursor"]
 
     return repos
+
 
 def save_to_db(repos):
     conn = psycopg2.connect(
