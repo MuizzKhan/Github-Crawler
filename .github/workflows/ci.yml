@@ -50,6 +50,15 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: python crawler.py
+      - name: Dump database to CSV
+        run: |
+          PGPASSWORD=postgres psql -h localhost -U postgres -d github_data -c "\COPY repositories TO 'repos.csv' CSV HEADER"
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: repo-stars
+          path: repos.csv
 
 
 
