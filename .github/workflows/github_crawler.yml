@@ -1,5 +1,5 @@
 # Name of the workflow (appears in GitHub Actions UI)
-name: Test Workflow
+name: Crawler Workflow
 
 # Trigger: run this workflow whenever code is pushed to the "main" branch
 on:
