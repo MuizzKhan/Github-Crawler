@@ -40,11 +40,35 @@ def fetch_repos_for_range(range_query, max_needed, total_count):
     while True:
         variables = {"cursor": cursor, "range": range_query}
         response = requests.post(GITHUB_API_URL, json={"query": query, "variables": variables}, headers=headers)
-        data = response.json()
+
+        # Handle non-200 responses
+        if response.status_code != 200:
+            print(f"Request failed with status {response.status_code}: {response.text}")
+            time.sleep(60)
+            continue
+
+        # Handle rate limits
+        remaining = int(response.headers.get("X-RateLimit-Remaining", 1))
+        if remaining == 0:
+            reset_time = int(response.headers.get("X-RateLimit-Reset", time.time()+60))
+            sleep_for = reset_time - int(time.time())
+            print(f"Rate limit hit. Sleeping for {sleep_for} seconds...")
+            time.sleep(max(sleep_for, 60))
+            continue
+
+        # Safely decode JSON
+        try:
+            data = response.json()
+        except Exception as e:
+            print("Failed to decode JSON:", e)
+            print("Response text:", response.text)
+            time.sleep(60)
+            continue
 
         if "errors" in data:
             print("Error:", data["errors"])
-            break
+            time.sleep(30)
+            continue
 
         search = data["data"]["search"]
 
@@ -59,7 +83,7 @@ def fetch_repos_for_range(range_query, max_needed, total_count):
 
         cursor = search["pageInfo"]["endCursor"]
 
-        # Respect rate limits
+        # Small delay to avoid hammering API
         time.sleep(1)
 
     return repos, total_count
@@ -84,12 +108,10 @@ def save_to_db(repos):
     conn.close()
 
 if __name__ == "__main__":
-    # Automatically generate ranges
+    # Generate ranges automatically
     star_ranges = []
-    # Fine-grained ranges for small repos
-    for i in range(0, 1000, 10):
+    for i in range(0, 1000, 10):  # finer buckets for small repos
         star_ranges.append(f"stars:{i}..{i+9}")
-    # Larger ranges for big repos
     star_ranges += [
         "stars:1000..5000",
         "stars:5001..10000",
@@ -98,7 +120,6 @@ if __name__ == "__main__":
         "stars:>100000"
     ]
 
-    total_repos = []
     total_count = 0
     max_needed = 100000
 
@@ -109,6 +130,5 @@ if __name__ == "__main__":
         repos, total_count = fetch_repos_for_range(r, max_needed, total_count)
         print(f"Fetched {len(repos)} repos for {r} (total so far: {total_count})")
         save_to_db(repos)
-        total_repos.extend(repos)
 
-    print(f"✅ Finished. Total repos fetched: {len(total_repos)}")
+    print(f"✅ Finished. Total repos fetched: {total_count}")
