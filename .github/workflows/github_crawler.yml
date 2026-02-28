@@ -1,39 +1,54 @@
+# Name of the workflow (appears in GitHub Actions UI)
 name: Test Workflow
 
+# Trigger: run this workflow whenever code is pushed to the "main" branch
 on:
   push:
     branches: [ main ]
 
 jobs:
+  # Define a single job called "crawl-stars"
   crawl-stars:
+    # Use the latest Ubuntu runner
     runs-on: ubuntu-latest
+
+    # Define a Postgres service container that runs alongside the job
     services:
       postgres:
+        # Use official Postgres 14 image
         image: postgres:14
+        # Environment variables to configure Postgres
         env:
           POSTGRES_USER: postgres
           POSTGRES_PASSWORD: postgres
           POSTGRES_DB: github_data
+        # Expose Postgres port
         ports:
           - 5432:5432
+        # Health check to ensure Postgres is ready before steps run
         options: >-
           --health-cmd="pg_isready -U postgres"
           --health-interval=10s
           --health-timeout=5s
           --health-retries=5
+
     steps:
+      # Step 1: Checkout repository code
       - name: Checkout repository
         uses: actions/checkout@v3
 
+      # Step 2: Set up Python 3.10 environment
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
           python-version: '3.10'
 
+      # Step 3: Install Python dependencies (Postgres driver + HTTP requests)
       - name: Install dependencies
         run: pip install psycopg2-binary requests
 
-
+      # Step 4: Set up database schema
+      # Install Postgres client and create "repositories" table if not exists
       - name: Set up database schema
         run: |
           sudo apt-get install -y postgresql-client
@@ -46,20 +61,22 @@ jobs:
             );
           "
 
+      # Step 5: Run the Python crawler script
+      # Uses the default GitHub token provided by Actions (no secrets needed)
       - name: Run crawler
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: python crawler.py
+
+      # Step 6: Dump database contents to CSV file
       - name: Dump database to CSV
         run: |
           PGPASSWORD=postgres psql -h localhost -U postgres -d github_data -c "\COPY repositories TO 'repos.csv' CSV HEADER"
 
+      # Step 7: Upload the CSV file as an artifact
+      # This makes the dataset downloadable from the Actions run summary
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
           name: repo-stars
           path: repos.csv
-
-
-
-
