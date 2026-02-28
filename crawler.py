@@ -108,10 +108,13 @@ def save_to_db(repos):
     conn.close()
 
 if __name__ == "__main__":
-    # Generate ranges automatically
+    # Generate fine-grained ranges for small repos
     star_ranges = []
-    for i in range(0, 1000, 10):  # finer buckets for small repos
-        star_ranges.append(f"stars:{i}..{i+9}")
+    for i in range(0, 500, 2):  # buckets of 2 stars each
+        star_ranges.append(f"stars:{i}..{i+1}")
+    for i in range(500, 1000, 5):  # buckets of 5 stars each
+        star_ranges.append(f"stars:{i}..{i+4}")
+    # Larger ranges for big repos
     star_ranges += [
         "stars:1000..5000",
         "stars:5001..10000",
