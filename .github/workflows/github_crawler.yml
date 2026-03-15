@@ -1,10 +1,12 @@
 # Name of the workflow (appears in GitHub Actions UI)
 name: Crawler Workflow
 
-# Trigger: run this workflow whenever code is pushed to the "main" branch
+# Trigger: run this workflow
 on:
+  workflow_dispatch:   # Allows manual runs from the Actions tab
   push:
-    branches: [ main ]
+    branches: [ main ] # Still runs automatically on push to main
+
 
 jobs:
   # Define a single job called "crawl-stars"
